@@ -1,0 +1,4 @@
+bucket       = "agent-ratings-tfstate-jk01"
+region       = "us-east-1"
+endpoints    = { s3 = "https://us-east-1.linodeobjects.com" }
+use_lockfile = true

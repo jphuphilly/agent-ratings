@@ -1,0 +1,2 @@
+k8s_version       = "1.36"
+api_allowed_cidrs = ["203.0.113.10/32"]
