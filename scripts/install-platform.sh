@@ -48,4 +48,5 @@ kubectl wait clusterissuer/letsencrypt-staging --for=condition=Ready --timeout=3
 
 ELAPSED=$(( $(date +%s) - START ))
 log "DONE. Gateway IP: $IP  platform_install: ${ELAPSED}s"
-echo "$(date -I),platform_install,${ELAPSED}" >> "$ROOT/results/rebuild.csv"
+[ "${RECORD:-0}" = 1 ] && echo "$(date -I),platform_install,${ELAPSED}" >> "$ROOT/results/rebuild.csv"
+exit 0

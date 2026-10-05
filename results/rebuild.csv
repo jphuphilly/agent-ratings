@@ -1,2 +1,5 @@
 date,metric,seconds
 2026-10-04,terraform_apply_only,153
+2026-10-04,terraform_apply,109
+2026-10-04,cluster_ready,208
+2026-10-04,platform_install,67
