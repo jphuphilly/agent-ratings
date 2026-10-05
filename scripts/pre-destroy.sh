@@ -33,7 +33,7 @@ fi
 # 2. Any other LoadBalancer Services
 lb_services | while read -r ns name; do
   echo "Deleting service $ns/$name"
-  kubectl delete svc -n "$ns" "$name" --wait=true
+  kubectl delete svc -n "$ns" "$name" --wait=true --ignore-not-found
 done
 
 # 3. PVCs
