@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Installs in-cluster platform: Envoy Gateway -> Gateway -> cert-manager -> ClusterIssuer.
+# Installs in-cluster platform: Envoy Gateway -> Gateway + HTTP->HTTPS redirect
+# -> cert-manager -> ClusterIssuers (staging + prod).
+# Does NOT issue certificates (needs DNS first) -- see scripts/issue-cert.sh.
 # Idempotent: safe to re-run. Versions come ONLY from platform/versions.env.
 set -euo pipefail
 
@@ -35,6 +37,9 @@ for _ in $(seq 1 30); do
 done
 [ -n "$IP" ] || { echo "Gateway never got an address"; exit 1; }
 
+log "Applying HTTP->HTTPS redirect route"
+kubectl apply -f "$ROOT/platform/gateway/http-redirect.yaml"
+
 log "cert-manager $CM_VERSION"
 helm repo add jetstack https://charts.jetstack.io --force-update >/dev/null
 helm upgrade --install cert-manager jetstack/cert-manager \
@@ -42,11 +47,14 @@ helm upgrade --install cert-manager jetstack/cert-manager \
   -f "$ROOT/platform/cert-manager/values.yaml" \
   --wait --timeout 10m
 
-log "Applying ClusterIssuer"
+log "Applying ClusterIssuers (staging + prod)"
 kubectl apply -f "$ROOT/platform/cert-manager/clusterissuer-staging.yaml"
-kubectl wait clusterissuer/letsencrypt-staging --for=condition=Ready --timeout=3m
+kubectl apply -f "$ROOT/platform/cert-manager/clusterissuer-prod.yaml"
+kubectl wait clusterissuer/letsencrypt-staging clusterissuer/letsencrypt-prod \
+  --for=condition=Ready --timeout=3m
 
 ELAPSED=$(( $(date +%s) - START ))
 log "DONE. Gateway IP: $IP  platform_install: ${ELAPSED}s"
 [ "${RECORD:-0}" = 1 ] && echo "$(date -I),platform_install,${ELAPSED}" >> "$ROOT/results/rebuild.csv"
+echo "NEXT: point A record ratings-dev.theblockchainarcade.io -> $IP (GoDaddy, .io zone), then ./scripts/issue-cert.sh"
 exit 0
