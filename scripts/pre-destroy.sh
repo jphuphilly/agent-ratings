@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if ! kubectl cluster-info >/dev/null 2>&1; then
+  echo "ERROR: cannot reach the cluster. Check KUBECONFIG, DNS, and the API server ACL." >&2
+  echo "If the cluster no longer exists, there is nothing to clean up in-cluster;" >&2
+  echo "check 'linode-cli nodebalancers list' and 'linode-cli volumes list' manually." >&2
+  exit 1
+fi
+
 lb_services() {
   kubectl get svc -A -o jsonpath='{range .items[?(@.spec.type=="LoadBalancer")]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}'
 }

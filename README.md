@@ -94,7 +94,7 @@ terraform apply
 LKE returns the kubeconfig base64-encoded. Regenerate it after every apply:
 
 ```bash
-terraform output -raw kubeconfig | base64 -d > ~/.kube/agent-ratings-dev.yaml
+terraform output -raw kubeconfig > ~/.kube/agent-ratings-dev.yaml
 chmod 600 ~/.kube/agent-ratings-dev.yaml
 export KUBECONFIG=~/.kube/agent-ratings-dev.yaml
 kubectl get nodes
