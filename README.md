@@ -9,8 +9,8 @@ The application is intentionally simple. Roughly 90% of the effort goes into the
 | Phase | Scope | Status |
 |-------|-------|--------|
 | 1a | LKE cluster via Terraform, remote state | ✅ Done |
-| 1b | Gateway API (Envoy Gateway) + cert-manager | ⏳ Next |
-| 1c | Sample app exposed over TLS | Planned |
+| 1b | Gateway API (Envoy Gateway) + cert-manager | ✅ Done |
+| 1c | Sample app exposed over TLS | ⏳ Next |
 | — | GitOps bootstrap (Argo CD or Flux) | Planned |
 | 2+ | CI/CD pipeline, security hardening, observability | Planned |
 
