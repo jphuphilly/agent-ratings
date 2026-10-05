@@ -19,3 +19,15 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: ratings-dev.theblockchainarcade.io
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: ratings-dev-tls
+      allowedRoutes:
+        namespaces:
+          from: All
