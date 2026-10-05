@@ -1,1 +1,2 @@
-2026-10-04,terraform_apply,153
+date,metric,seconds
+2026-10-04,terraform_apply_only,153
