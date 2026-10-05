@@ -25,13 +25,14 @@ count() {
 NB=$(count nodebalancers list)
 VOL=$(count volumes list)
 CL=$(count lke clusters-list)
+LN=$(count linodes list)
 STATE_OUT=$(terraform -chdir="$TF_DIR" state list)
 ST=$(printf '%s' "$STATE_OUT" | grep -c . || true)
 
-echo "$(date -I),$NB,$VOL,$CL,$ST,$DESTROY_SECS" >> "$CSV"
-echo "NodeBalancers=$NB Volumes=$VOL Clusters=$CL StateResources=$ST destroy=${DESTROY_SECS}s"
+echo "$(date -I),$NB,$VOL,$CL,$LN,$ST,$DESTROY_SECS" >> "$CSV"
+echo "NodeBalancers=$NB Volumes=$VOL Clusters=$CL Linodes=$LN StateResources=$ST destroy=${DESTROY_SECS}s"
 
-if [ "$NB$VOL$CL$ST" = "0000" ]; then
+if [ "$NB$VOL$CL$LN$ST" = "00000" ]; then
   echo "CLEAN: nothing billing."
 else
   echo "LEFTOVERS: check the Linode console now. Billing may continue."

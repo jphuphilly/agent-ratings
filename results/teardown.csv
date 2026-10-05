@@ -1,2 +1,3 @@
-date,nodebalancers,volumes,clusters,state_resources,destroy_seconds
-2026-10-04,0,0,0,,
+date,nodebalancers,volumes,clusters,linodes,state_resources,destroy_seconds
+2026-10-04,0,0,0,,,
+2026-10-04,0,0,0,0,0,40
