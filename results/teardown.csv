@@ -1,1 +1,2 @@
-2026-10-04,orphan_nodebalancers,0,orphan_volumes,0,clusters,0
+date,nodebalancers,volumes,clusters,state_resources,destroy_seconds
+2026-10-04,0,0,0,,
