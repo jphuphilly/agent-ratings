@@ -25,8 +25,6 @@ kubectl wait -n envoy-gateway-system deployment/envoy-gateway \
 
 log "Applying GatewayClass + Gateway"
 kubectl apply -f "$ROOT/platform/gateway/gateway.yaml"
-kubectl wait -n envoy-gateway-system gateway/eg \
-  --for=condition=Programmed --timeout=5m
 
 log "Waiting for Gateway address"
 IP=""
