@@ -37,6 +37,7 @@ if [ "$DNS_IP" != "$GW_IP" ]; then
   exit 1
 fi
 echo "[${SECONDS}s] DNS OK: $HOST -> $GW_IP. Issuer: $ISSUER"
+DNS_WAIT=$SECONDS; SECONDS=0   # cert_issue excludes DNS wait
 
 sed -E "s/name: letsencrypt-(staging|prod)$/name: $ISSUER/" "$CERT_FILE" | kubectl apply -f -
 
@@ -68,6 +69,7 @@ done
 echo "[${SECONDS}s] DONE. Served: $SERVED"
 if [ "${RECORD:-0}" = "1" ]; then
   echo "$(date -I),cert_issue,${SECONDS}" >> "$ROOT/results/rebuild.csv"
+  echo "$(date -I),dns_wait,${DNS_WAIT}" >> "$ROOT/results/rebuild.csv"
   echo "Recorded cert_issue=${SECONDS}s"
 fi
 exit 0
