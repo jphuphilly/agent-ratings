@@ -6,7 +6,29 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TF_DIR="$ROOT/infra/envs/dev"
 CSV="$ROOT/results/teardown.csv"
-: "${LINODE_CLI_TOKEN:?source ~/.config/agent-ratings.env first}"
+: "${LINODE_TOKEN:?run: source ~/.config/agent-ratings/env}"
+: "${AWS_SECRET_ACCESS_KEY:?run: source ~/.config/agent-ratings/env}"
+
+# 0. Preflight. An unauthenticated linode-cli opens an interactive wizard and
+#    HANGS instead of failing -- so check auth explicitly, with stdin closed.
+linode-cli profile view --json </dev/null >/dev/null 2>&1 \
+  || { echo "linode-cli not authenticated (run: linode-cli configure --token)"; exit 2; }
+
+count() {
+  local out
+  out=$(linode-cli "$@" --text --no-headers </dev/null) || { echo "linode-cli $* failed" >&2; exit 1; }
+  printf '%s' "$out" | grep -c . || true
+}
+
+# Idempotent: no cluster -> verify nothing is billing, exit 0, no CSV row.
+CL0=$(count lke clusters-list)
+if [ "$CL0" = 0 ]; then
+  NB0=$(count nodebalancers list); VOL0=$(count volumes list); LN0=$(count linodes list)
+  if [ "$NB0$VOL0$LN0" = "000" ]; then
+    echo "Already clean: no cluster, no orphans. Nothing to do."; exit 0
+  fi
+  echo "No cluster, but orphans exist: NB=$NB0 VOL=$VOL0 LN=$LN0. Check the Linode console."; exit 1
+fi
 
 # 1. Remove things the cluster created outside Terraform (LBs, PVCs). Has its own confirm prompt.
 "$ROOT/scripts/pre-destroy.sh"
@@ -17,11 +39,6 @@ terraform -chdir="$TF_DIR" destroy -auto-approve
 DESTROY_SECS=$(( $(date +%s) - T0 ))
 
 # 3. Count leftovers. A failed API call must FAIL, never read as 0.
-count() {
-  local out
-  out=$(linode-cli "$@" --text --no-headers) || { echo "linode-cli $* failed" >&2; exit 1; }
-  printf '%s' "$out" | grep -c . || true
-}
 NB=$(count nodebalancers list)
 VOL=$(count volumes list)
 CL=$(count lke clusters-list)
