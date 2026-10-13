@@ -6,3 +6,4 @@ date,metric,seconds
 2026-10-04,terraform_apply,179
 2026-10-04,cluster_ready,187
 2026-10-04,platform_install,70
+2026-10-12,cluster_apply,188
