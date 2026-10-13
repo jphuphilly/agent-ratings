@@ -7,3 +7,7 @@ date,metric,seconds
 2026-10-04,cluster_ready,187
 2026-10-04,platform_install,70
 2026-10-12,cluster_apply,188
+2026-10-12,platform_install,55
+2026-10-12,cert_secret,34
+2026-10-12,cert_served,300
+2026-10-12,dns_wait,1

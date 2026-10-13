@@ -2,7 +2,7 @@
 # Issue/refresh the ratings-dev TLS cert. Run AFTER the A record points at the
 # current Gateway IP. Default issuer is STAGING (LE prod limit: 5 certs/week per
 # hostname). Prod:  ISSUER=letsencrypt-prod ./scripts/issue-cert.sh
-# Metrics: RECORD=1 appends a cert_issue row to results/rebuild.csv
+# Metrics: RECORD=1 appends cert_secret, cert_served, dns_wait rows to results/rebuild.csv
 set -euo pipefail
 
 HOST="${HOST:-ratings-dev.theblockchainarcade.io}"
@@ -55,21 +55,24 @@ for i in $(seq 1 30); do
   sleep 10
 done
 kubectl wait --for=condition=Ready certificate/ratings-dev -n "$NS" --timeout=60s
+CERT_SECRET=$SECONDS
 echo "[${SECONDS}s] Secret: $ISS"
 
 # Verify what Envoy actually serves (connect by IP: no local-resolver lag).
 for i in $(seq 1 12); do
-  SERVED=$(echo | openssl s_client -connect "$GW_IP:443" -servername "$HOST" 2>/dev/null \
+  SERVED=$(echo | timeout 10 openssl s_client -connect "$GW_IP:443" -servername "$HOST" 2>/dev/null \
            | openssl x509 -noout -issuer 2>/dev/null || true)
+  echo "[${SECONDS}s] probe $i: ${SERVED:-no cert}"
   if [ -n "$SERVED" ] && echo "$SERVED" | issuer_matches; then break; fi
-  if [ "$i" -eq 12 ]; then echo "ERROR: Envoy not serving $ISSUER cert after 60s (got: ${SERVED:-nothing})"; exit 1; fi
+  if [ "$i" -eq 12 ]; then echo "ERROR: Envoy not serving $ISSUER cert after 12 probes (got: ${SERVED:-nothing})"; exit 1; fi
   sleep 5
 done
 
 echo "[${SECONDS}s] DONE. Served: $SERVED"
 if [ "${RECORD:-0}" = "1" ]; then
-  echo "$(date -I),cert_issue,${SECONDS}" >> "$ROOT/results/rebuild.csv"
+  echo "$(date -I),cert_secret,${CERT_SECRET}" >> "$ROOT/results/rebuild.csv"
+  echo "$(date -I),cert_served,${SECONDS}" >> "$ROOT/results/rebuild.csv"
   echo "$(date -I),dns_wait,${DNS_WAIT}" >> "$ROOT/results/rebuild.csv"
-  echo "Recorded cert_issue=${SECONDS}s"
+  echo "Recorded cert_secret=${CERT_SECRET}s cert_served=${SECONDS}s dns_wait=${DNS_WAIT}s"
 fi
 exit 0
