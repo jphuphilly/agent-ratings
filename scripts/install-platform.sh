@@ -56,5 +56,5 @@ ELAPSED=$(( $(date +%s) - START ))
 log "DONE. Gateway IP: $IP  platform_install: ${ELAPSED}s"
 [ "${RECORD:-0}" = 1 ] && echo "$(date -I),platform_install,${ELAPSED}" >> "$ROOT/results/rebuild.csv"
 "$ROOT/scripts/set-dns.sh" set "$IP"
-echo "NEXT: ./scripts/issue-cert.sh  (DNS set via API; its DoH precheck waits for propagation)"
+echo "NEXT: ./scripts/issue-cert.sh  (DNS set via API; issue-cert waits for the authoritative NS from inside the cluster)"
 exit 0

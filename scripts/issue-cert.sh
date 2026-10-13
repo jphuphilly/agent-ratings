@@ -26,16 +26,35 @@ kubectl get --raw=/readyz >/dev/null || { echo "ERROR: API server unreachable (c
 GW_IP=$(kubectl get gateway eg -n "$NS" -o jsonpath='{.status.addresses[0].value}')
 [ -n "$GW_IP" ] || { echo "ERROR: Gateway eg has no address"; exit 1; }
 
-# DNS precheck via DoH (direct port 53 is unreliable on some networks).
 # Failed HTTP-01 validations count against LE rate limits, so never issue on a mismatch.
-DNS_IP=$(curl -fsS -m 10 "https://dns.google/resolve?name=${HOST}&type=A" \
-  | python3 -c 'import sys,json; d=json.load(sys.stdin); print(" ".join(a["data"] for a in d.get("Answer",[]) if a.get("type")==1))') \
-  || { echo "ERROR: DoH lookup failed"; exit 1; }
-if [ "$DNS_IP" != "$GW_IP" ]; then
-  echo "ERROR: $HOST resolves to '${DNS_IP:-nothing}', Gateway is $GW_IP"
-  echo "Update the A record in the GoDaddy zone for this hostname (TTL 600), wait, re-run."
-  exit 1
-fi
+# DNS precheck from INSIDE the cluster. This workstation's port 53 is intercepted
+# (a proxy answers every query and caches NXDOMAIN), and public resolvers
+# negative-cache too. A pod on Linode asks the zone's authoritative NS directly
+# (+norec, require the 'aa' flag): nothing cached, same vantage point as Let's Encrypt.
+PROBE=dnsprobe-$$
+kubectl -n default run "$PROBE" --image=registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3 \
+  --restart=Never --command -- sleep 900 >/dev/null
+trap 'kubectl -n default delete pod "$PROBE" --wait=false >/dev/null 2>&1 || true' EXIT
+kubectl -n default wait pod/"$PROBE" --for=condition=Ready --timeout=120s >/dev/null
+pdig() { kubectl -n default exec "$PROBE" -- dig "$@"; }
+ZONE_NS=$(pdig +short NS "${HOST#*.}" | head -1)
+[ -n "$ZONE_NS" ] || { echo "ERROR: no NS found for ${HOST#*.} from inside the cluster"; exit 1; }
+SECONDS=0   # dns_wait starts once the probe is ready (excludes image pull)
+DNS_IP=""; STATE=""
+for i in $(seq 1 60); do
+  OUT=$(pdig +norec +time=5 +tries=1 A "$HOST" @"$ZONE_NS" 2>&1 || true)
+  if echo "$OUT" | grep -q 'flags:[a-z ]* aa'; then
+    DNS_IP=$(echo "$OUT" | awk '$4=="A"{print $5}' | sort | tr '\n' ' ' | sed 's/ $//')
+    STATE="${DNS_IP:-not published yet}"
+  else
+    DNS_IP=""
+    STATE="no authoritative answer ($(echo "$OUT" | grep -oE 'timed out|status: [A-Z]+' | head -1))"
+  fi
+  [ "$DNS_IP" = "$GW_IP" ] && break
+  echo "[${SECONDS}s] DNS $i: $STATE from $ZONE_NS (want $GW_IP)"
+  sleep 10
+done
+[ "$DNS_IP" = "$GW_IP" ] || { echo "ERROR: $ZONE_NS not serving $GW_IP for $HOST after 10m (last: $STATE). Check: ./scripts/set-dns.sh show"; exit 1; }
 echo "[${SECONDS}s] DNS OK: $HOST -> $GW_IP. Issuer: $ISSUER"
 DNS_WAIT=$SECONDS; SECONDS=0   # cert_issue excludes DNS wait
 
