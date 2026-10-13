@@ -14,3 +14,8 @@ date,metric,seconds
 2026-10-13,cluster_apply,156
 2026-10-13,cluster_ready,181
 2026-10-13,platform_install,99
+2026-10-13,cluster_apply,102
+2026-10-13,cluster_ready,191
+2026-10-13,platform_install,113
+2026-10-13,cert_secret,33
+2026-10-13,cert_served,74
