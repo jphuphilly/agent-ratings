@@ -8,6 +8,7 @@ TF_DIR="$ROOT/infra/envs/dev"
 CSV="$ROOT/results/teardown.csv"
 : "${LINODE_TOKEN:?run: source ~/.config/agent-ratings/env}"
 : "${AWS_SECRET_ACCESS_KEY:?run: source ~/.config/agent-ratings/env}"
+: "${GD_PAT:?run: source ~/.config/agent-ratings/env}"
 
 # 0. Preflight. An unauthenticated linode-cli opens an interactive wizard and
 #    HANGS instead of failing -- so check auth explicitly, with stdin closed.
@@ -25,7 +26,8 @@ CL0=$(count lke clusters-list)
 if [ "$CL0" = 0 ]; then
   NB0=$(count nodebalancers list); VOL0=$(count volumes list); LN0=$(count linodes list)
   if [ "$NB0$VOL0$LN0" = "000" ]; then
-    echo "Already clean: no cluster, no orphans. Nothing to do."; exit 0
+    "$ROOT/scripts/set-dns.sh" delete
+    echo "Already clean: no cluster, no orphans, no DNS record."; exit 0
   fi
   echo "No cluster, but orphans exist: NB=$NB0 VOL=$VOL0 LN=$LN0. Check the Linode console."; exit 1
 fi
@@ -37,6 +39,9 @@ fi
 T0=$(date +%s)
 terraform -chdir="$TF_DIR" destroy -auto-approve
 DESTROY_SECS=$(( $(date +%s) - T0 ))
+
+# Cluster is gone: its A record now points at a recyclable IP. Remove it.
+"$ROOT/scripts/set-dns.sh" delete
 
 # 3. Count leftovers. A failed API call must FAIL, never read as 0.
 NB=$(count nodebalancers list)

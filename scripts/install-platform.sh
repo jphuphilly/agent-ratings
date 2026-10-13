@@ -9,6 +9,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/platform/versions.env"
 : "${EG_VERSION:?EG_VERSION not set in versions.env}"
 : "${CM_VERSION:?CM_VERSION not set in versions.env}"
+: "${GD_PAT:?run: source ~/.config/agent-ratings/env}"
 
 START=$(date +%s)
 log() { echo "[$(( $(date +%s) - START ))s] $*"; }
@@ -54,5 +55,6 @@ kubectl wait clusterissuer/letsencrypt-staging clusterissuer/letsencrypt-prod \
 ELAPSED=$(( $(date +%s) - START ))
 log "DONE. Gateway IP: $IP  platform_install: ${ELAPSED}s"
 [ "${RECORD:-0}" = 1 ] && echo "$(date -I),platform_install,${ELAPSED}" >> "$ROOT/results/rebuild.csv"
-echo "NEXT: point A record ratings-dev.theblockchainarcade.io -> $IP (GoDaddy, .io zone), then ./scripts/issue-cert.sh"
+"$ROOT/scripts/set-dns.sh" set "$IP"
+echo "NEXT: ./scripts/issue-cert.sh  (DNS set via API; its DoH precheck waits for propagation)"
 exit 0
