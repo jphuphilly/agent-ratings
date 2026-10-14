@@ -21,8 +21,13 @@ if has_gateway_api; then kubectl get gateway -A; else echo "  (Gateway API not i
 echo "LoadBalancer services:"; lb_services
 echo "PVCs:"; kubectl get pvc -A
 
-read -rp "Delete all Gateways, LoadBalancer services and PVCs? [y/N] " ans
-[[ "$ans" == "y" ]] || exit 1
+# Interactive by default. ASSUME_YES=1 skips the prompt for unattended runs.
+if [[ "${ASSUME_YES:-0}" == 1 ]]; then
+  echo "ASSUME_YES=1: deleting without prompting."
+else
+  read -rp "Delete all Gateways, LoadBalancer services and PVCs? [y/N] " ans
+  [[ "$ans" == "y" ]] || exit 1
+fi
 
 # 1. Gateways first, or Envoy Gateway recreates their LoadBalancer Services
 if has_gateway_api; then
