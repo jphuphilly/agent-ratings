@@ -25,6 +25,17 @@ chmod 600 "$KCFG"
 grep -q '^apiVersion' "$KCFG" || { echo "kubeconfig decode failed"; exit 1; }
 export KUBECONFIG="$KCFG"
 
+# Fail fast if the API is unreachable (IP changed -> ACL) instead of looping silently.
+# 2m of retries: a new cluster / ACL change can briefly answer EOF.
+API_OK=0
+for _ in $(seq 1 12); do kubectl get --raw /readyz >/dev/null 2>&1 && { API_OK=1; break; }; sleep 10; done
+if [ "$API_OK" != 1 ]; then
+  echo "ERROR: Kubernetes API unreachable for 2m."
+  echo "  Your IP: $(curl -4 -s -m 5 https://api.ipify.org || echo unknown)"
+  echo "  Allowed: $(grep api_allowed_cidrs "$TF/terraform.tfvars" || echo '?')"
+  exit 1
+fi
+
 EXPECTED=$(terraform -chdir="$TF" show -json \
   | jq '[.. | objects | select(.type? == "linode_lke_cluster") | .values.pool[]?.count] | add')
 [[ "$EXPECTED" =~ ^[0-9]+$ ]] || { echo "Could not read node count from state (got: $EXPECTED)"; exit 1; }
