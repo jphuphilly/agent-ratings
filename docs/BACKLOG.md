@@ -12,7 +12,11 @@
 - [ ] Benchmark script (n=3) against the final GitOps bootstrap path
 - [x] Secret scanning in CI: gitleaks (full history, default rules + IPv4 rule) and an IP check on new
   commit messages, on every push and PR
-- [ ] CI/CD + Renovate, security hardening, observability, write-up
+- [ ] Observability: kube-prometheus-stack + ratings-api SLOs (availability + latency, burn-rate alerts),
+  Grafana dashboard, fault-injection drill. Written 2026-10-14; verify on next rebuild
+- [ ] Grafana admin password from a generated Secret (chart default is publicly known; UI is port-forward only)
+- [ ] Alertmanager receiver (alerts currently visible only in Prometheus/Alertmanager UIs)
+- [ ] CI/CD + Renovate, security hardening, write-up
 - [ ] Argo CD webhook from GitHub (needs argocd-server exposed with auth): sync in seconds, not ~3m poll
 - [ ] dns_wait: measure from when the A record is written, not from when the probe starts
 - [ ] Release automation: CI opens the values.yaml bump PR after pushing an image (removes the manual edit)

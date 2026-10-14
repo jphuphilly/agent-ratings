@@ -13,7 +13,9 @@ The application is intentionally simple. Roughly 90% of the effort goes into the
 | 1c | Sample app exposed over TLS | ✅ Done |
 | — | GitOps bootstrap: Argo CD owns `apps/` (self-heal, prune, revision-verified) | ✅ Done |
 | 2a | ratings-api: own Helm chart, CI to GHCR, tag-based releases via Argo (release + rollback verified) | ✅ Done |
-| 2+ | Argo owns `platform/`, secret scanning, observability + SLOs | Planned |
+| 2b | Secret scanning: gitleaks + IP rule on every push/PR, full history | ✅ Done |
+| 2c | Observability: Prometheus, Grafana, ratings-api SLOs with burn-rate alerts | ⏳ In progress |
+| 3+ | Argo owns `platform/`, Renovate, write-up | Planned |
 
 Procedures, measured timings and findings: [docs/RUNBOOK.md](docs/RUNBOOK.md),
 [docs/LESSONS.md](docs/LESSONS.md), [docs/BACKLOG.md](docs/BACKLOG.md).

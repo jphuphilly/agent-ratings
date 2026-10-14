@@ -1,0 +1,82 @@
+# kube-prometheus-stack: Prometheus Operator, Prometheus, Alertmanager, Grafana, kube-state-metrics,
+# node-exporter. Deployed by Argo like everything else in apps/. UIs are port-forward only.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 92.6.0
+    helm:
+      releaseName: kps
+      valuesObject:
+        fullnameOverride: kps
+
+        # LKE's control plane is managed and not scrapeable: without this, those targets show down
+        # and their default alerts fire forever.
+        kubeEtcd:
+          enabled: false
+        kubeControllerManager:
+          enabled: false
+        kubeScheduler:
+          enabled: false
+        kubeProxy:
+          enabled: false
+        defaultRules:
+          rules:
+            etcd: false
+            kubeControllerManager: false
+            kubeSchedulerAlerting: false
+            kubeSchedulerRecording: false
+            kubeProxy: false
+
+        prometheus:
+          prometheusSpec:
+            # Pick up ServiceMonitors / PodMonitors / PrometheusRules from any namespace and any label,
+            # not only ones labelled for this Helm release.
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            retention: 3d       # matches the 3d error-budget window in the ratings-api SLO rules
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 1536Mi
+
+        alertmanager:
+          alertmanagerSpec:
+            retention: 24h
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+
+        grafana:
+          # Not exposed (port-forward only). The chart's default admin password is publicly known;
+          # replacing it with a generated secret is on the backlog.
+          sidecar:
+            dashboards:
+              enabled: true
+              label: grafana_dashboard
+              searchNamespace: ALL
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # The operator's CRDs exceed the 256KB annotation limit of client-side apply.
+      - ServerSideApply=true

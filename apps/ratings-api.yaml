@@ -25,3 +25,12 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # ServiceMonitor/PrometheusRule CRDs come from apps/monitoring.yaml, which may still be installing.
+      # Skip the dry run for those kinds and retry until the CRDs exist.
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

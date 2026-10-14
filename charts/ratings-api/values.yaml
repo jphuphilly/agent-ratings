@@ -3,7 +3,7 @@ replicaCount: 2
 image:
   repository: ghcr.io/jphuphilly/agent-ratings/ratings-api
   # Release flow: push git tag ratings-api-vX.Y.Z -> CI publishes image X.Y.Z -> bump this -> Argo deploys.
-  tag: "0.1.0"
+  tag: "0.2.0"
   pullPolicy: IfNotPresent
 
 containerPort: 8000
@@ -24,3 +24,20 @@ route:
     name: eg
     namespace: envoy-gateway-system
     sectionName: https
+
+# Fraction (0.0-1.0) of /api requests answered with 503. SLO drill only; keep 0 otherwise.
+faultRate: "0"
+
+# Prometheus scraping + SLO rules + Grafana dashboard. Needs the monitoring stack (apps/monitoring.yaml).
+monitoring:
+  enabled: true
+  slo:
+    availabilityTarget: 0.995   # 99.5% of /api requests are not 5xx (30d). Error budget 0.5%.
+    latencyTarget: 0.99         # 99% of /api requests complete in < 250ms (30d).
+    latencyThresholdBucket: "0.25"   # must be an existing histogram bucket (prometheus_client default buckets)
+
+# Steady synthetic traffic so the SLIs have data to compute on. Dev only.
+loadgen:
+  enabled: true
+  image: busybox:1.37.0
+  intervalSeconds: "1"   # ~1 req/s; whole seconds so busybox sleep is portable

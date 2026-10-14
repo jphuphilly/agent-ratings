@@ -1,0 +1,50 @@
+{{- if .Values.loadgen.enabled }}
+# Synthetic traffic for the SLIs. Hits the Service in-cluster (bypasses the Gateway).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-loadgen
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}-loadgen
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Release.Name }}-loadgen
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Release.Name }}-loadgen
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: loadgen
+          image: {{ .Values.loadgen.image }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              BASE=http://{{ .Release.Name }}.{{ .Release.Namespace }}.svc
+              while true; do
+                for p in /api/agents /api/agents/sample-receptionist-a /api/version; do
+                  wget -q -O /dev/null -T 5 "$BASE$p" 2>/dev/null || true
+                  sleep {{ .Values.loadgen.intervalSeconds }}
+                done
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              memory: 32Mi
+{{- end }}

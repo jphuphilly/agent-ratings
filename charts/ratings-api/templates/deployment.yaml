@@ -24,6 +24,9 @@ spec:
         - name: api
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: FAULT_RATE
+              value: {{ .Values.faultRate | quote }}
           ports:
             - name: http
               containerPort: {{ .Values.containerPort }}
