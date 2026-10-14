@@ -96,5 +96,7 @@ the route leaked.
 - Helm chart pulls from Docker Hub can fail with `dial tcp [2600:...]:443: network is unreachable`: the
   workstation tried IPv6 and has no IPv6 route. It was intermittent; a plain re-run of the script worked.
   If it repeats: `sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1` (resets on container restart).
+- CI fails on any IPv4 address in files or in new commit messages (`.gitleaks.toml`). If you need an
+  example address in docs, use a reserved documentation range (192.0.2.x, 198.51.100.x, 203.0.113.x).
 - Scripts append to tracked `results/*.csv` when RECORD=1. Commit by path, never `git commit -am`,
   or those rows end up in unrelated commits.

@@ -1,0 +1,46 @@
+name: gitleaks
+
+# Public repo: scan every push and PR, across the FULL git history, for secrets and IP addresses.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history: a secret deleted in a later commit is still public
+
+      - name: gitleaks (full history, default rules + IPv4 rule)
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            git /repo --config /repo/.gitleaks.toml --redact --verbose --exit-code 1
+
+      # gitleaks scans file contents, not commit messages. Check the messages of the commits this push or PR
+      # adds for IPs. Only new commits: history is already public.
+      - name: No IPs in new commit messages
+        env:
+          BEFORE: ${{ github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="origin/$BASE_REF..HEAD"
+          elif [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            RANGE="-1 HEAD"
+          else
+            RANGE="$BEFORE..HEAD"
+          fi
+          HITS=$(git log --format=%B $RANGE \
+            | grep -oE '\b((25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])\b' \
+            | grep -vE '^(0\.0\.0\.0|127\.0\.0\.1|192\.0\.2\.[0-9]+|198\.51\.100\.[0-9]+|203\.0\.113\.[0-9]+|100\.115\.92\.193)$' || true)
+          if [ -n "$HITS" ]; then
+            echo "::error::IP address in a commit message ($(echo "$HITS" | wc -l) found). Reword the commit before pushing."
+            exit 1
+          fi
+          echo "No IPs in commit messages for range: $RANGE"
