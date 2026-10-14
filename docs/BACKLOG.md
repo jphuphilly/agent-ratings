@@ -1,5 +1,7 @@
 # Backlog
 
+- [ ] ratings-api v0: FastAPI + own Helm chart + GHCR image via GitHub Actions, deployed by Argo
+  (app-of-apps). Written 2026-10-14; verify on next rebuild
 - [x] GitOps bootstrap: Argo CD owns `apps/`. Verified 2026-10-14: Synced/Healthy, self-heal <=1s,
   push->sync 155-178s, revision matched HEAD
 - [ ] GitOps: Argo CD owns `platform/` too. Plan first: Argo would then manage cert-manager/Gateway that

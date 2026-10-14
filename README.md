@@ -9,10 +9,14 @@ The application is intentionally simple. Roughly 90% of the effort goes into the
 | Phase | Scope | Status |
 |-------|-------|--------|
 | 1a | LKE cluster via Terraform, remote state | ✅ Done |
-| 1b | Gateway API (Envoy Gateway) + cert-manager | ✅ Done |
-| 1c | Sample app exposed over TLS | ⏳ Next |
-| — | GitOps bootstrap (Argo CD or Flux) | Planned |
-| 2+ | CI/CD pipeline, security hardening, observability | Planned |
+| 1b | Gateway API (Envoy Gateway) + cert-manager, automated DNS + TLS | ✅ Done |
+| 1c | Sample app exposed over TLS | ✅ Done |
+| — | GitOps bootstrap: Argo CD owns `apps/` (self-heal, prune, revision-verified) | ✅ Done |
+| 2a | ratings-api: own Helm chart, CI to GHCR, tag-based releases via Argo | ⏳ In progress |
+| 2+ | Argo owns `platform/`, secret scanning, observability + SLOs | Planned |
+
+Procedures, measured timings and findings: [docs/RUNBOOK.md](docs/RUNBOOK.md),
+[docs/LESSONS.md](docs/LESSONS.md), [docs/BACKLOG.md](docs/BACKLOG.md).
 
 ## Architecture decisions
 
@@ -40,8 +44,14 @@ The application is intentionally simple. Roughly 90% of the effort goes into the
 infra/
   modules/lke-cluster/   # reusable cluster module (versions, variables, main, outputs)
   envs/dev/              # dev environment root (backend, tfvars, module call)
-scripts/
-  pre-destroy.sh         # removes LoadBalancer Services and PVCs before destroy
+platform/                # Helm values + manifests for cluster platform (gateway, cert-manager, argocd)
+apps/                    # everything here is deployed by Argo CD (plain YAML, recursive)
+charts/ratings-api/      # own Helm chart, rendered by the ratings-api Argo Application
+services/ratings-api/    # FastAPI service, tests, Dockerfile
+.github/workflows/       # CI: test + image build; release tags push to GHCR
+scripts/                 # create-cluster, install-platform, issue-cert, install-argocd, teardown
+docs/                    # runbook, lessons, backlog
+results/                 # timing CSVs (RECORD=1)
 ```
 
 ## Prerequisites

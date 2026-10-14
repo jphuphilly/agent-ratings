@@ -1,0 +1,27 @@
+# App-of-apps: the "apps" Application syncs this file, which creates a child Application
+# that renders the Helm chart in charts/ratings-api. The chart lives outside apps/ because
+# "apps" reads plain YAML recursively and would choke on Helm templates.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ratings-api
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jphuphilly/agent-ratings.git
+    targetRevision: main
+    path: charts/ratings-api
+    helm:
+      releaseName: ratings-api
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ratings
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
