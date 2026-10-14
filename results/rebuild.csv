@@ -30,3 +30,10 @@ date,metric,seconds
 2026-10-14,cert_served,78
 2026-10-14,dns_wait,10
 2026-10-14,argocd_install,54
+2026-10-14,cluster_apply,100
+2026-10-14,cluster_ready,197
+2026-10-14,platform_install,59
+2026-10-14,cert_secret,31
+2026-10-14,cert_served,67
+2026-10-14,dns_wait,0
+2026-10-14,argocd_install,57
