@@ -1,12 +1,17 @@
 import os
+import random
 import time
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 from app.data import AGENTS
 
 VERSION = os.getenv("APP_VERSION", "dev")
+
+# Fault injection for SLO drills: fraction (0.0-1.0) of /api requests answered with 503.
+# Set through the Helm chart (values.yaml faultRate), so a drill is a Git commit like any other change.
+FAULT_RATE = float(os.getenv("FAULT_RATE", "0"))
 
 app = FastAPI(title="ratings-api", version=VERSION)
 
@@ -31,22 +36,29 @@ async def metrics_middleware(request: Request, call_next):
     return response
 
 
+def inject_fault():
+    # Runs inside the matched route, so the 503 is labelled with the real route template
+    # and counts against the SLI.
+    if FAULT_RATE > 0 and random.random() < FAULT_RATE:
+        raise HTTPException(status_code=503, detail="injected fault")
+
+
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
 
 
-@app.get("/api/version")
+@app.get("/api/version", dependencies=[Depends(inject_fault)])
 def version():
     return {"version": VERSION}
 
 
-@app.get("/api/agents")
+@app.get("/api/agents", dependencies=[Depends(inject_fault)])
 def list_agents():
     return AGENTS
 
 
-@app.get("/api/agents/{agent_id}")
+@app.get("/api/agents/{agent_id}", dependencies=[Depends(inject_fault)])
 def get_agent(agent_id: str):
     for agent in AGENTS:
         if agent["id"] == agent_id:

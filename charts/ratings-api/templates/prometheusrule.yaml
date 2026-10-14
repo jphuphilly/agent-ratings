@@ -1,0 +1,130 @@
+{{- if .Values.monitoring.enabled }}
+{{- $avail := .Values.monitoring.slo.availabilityTarget }}
+{{- $lat := .Values.monitoring.slo.latencyTarget }}
+{{- $le := .Values.monitoring.slo.latencyThresholdBucket }}
+# SLOs for ratings-api, as multi-window multi-burn-rate alerts (Google SRE Workbook, ch. 5).
+#   Availability: {{ $avail }} of /api requests are not 5xx.        Error budget = 1 - target.
+#   Latency:      {{ $lat }} of /api requests complete in < {{ $le }}s.
+# 5xx numerators use `or vector(0)`: with no 5xx series yet, sum() is empty, not 0.
+# Burn rate = observed error ratio / error budget. 14.4x for 1h burns 2% of a 30-day budget.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-slo
+  labels:
+    {{- include "ratings-api.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: {{ .Release.Name }}-sli
+      rules:
+        - record: ratings_api:sli_errors:ratio_rate5m
+          expr: |
+            (sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*",status=~"5.."}[5m])) or vector(0))
+            /
+            sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*"}[5m]))
+        - record: ratings_api:sli_slow:ratio_rate5m
+          expr: |
+            1 - (
+              sum(rate(http_request_duration_seconds_bucket{job="{{ .Release.Name }}",route=~"/api/.*",le="{{ $le }}"}[5m]))
+              /
+              sum(rate(http_request_duration_seconds_count{job="{{ .Release.Name }}",route=~"/api/.*"}[5m]))
+            )
+        - record: ratings_api:sli_errors:ratio_rate30m
+          expr: |
+            (sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*",status=~"5.."}[30m])) or vector(0))
+            /
+            sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*"}[30m]))
+        - record: ratings_api:sli_slow:ratio_rate30m
+          expr: |
+            1 - (
+              sum(rate(http_request_duration_seconds_bucket{job="{{ .Release.Name }}",route=~"/api/.*",le="{{ $le }}"}[30m]))
+              /
+              sum(rate(http_request_duration_seconds_count{job="{{ .Release.Name }}",route=~"/api/.*"}[30m]))
+            )
+        - record: ratings_api:sli_errors:ratio_rate1h
+          expr: |
+            (sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*",status=~"5.."}[1h])) or vector(0))
+            /
+            sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*"}[1h]))
+        - record: ratings_api:sli_slow:ratio_rate1h
+          expr: |
+            1 - (
+              sum(rate(http_request_duration_seconds_bucket{job="{{ .Release.Name }}",route=~"/api/.*",le="{{ $le }}"}[1h]))
+              /
+              sum(rate(http_request_duration_seconds_count{job="{{ .Release.Name }}",route=~"/api/.*"}[1h]))
+            )
+        - record: ratings_api:sli_errors:ratio_rate6h
+          expr: |
+            (sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*",status=~"5.."}[6h])) or vector(0))
+            /
+            sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*"}[6h]))
+        - record: ratings_api:sli_slow:ratio_rate6h
+          expr: |
+            1 - (
+              sum(rate(http_request_duration_seconds_bucket{job="{{ .Release.Name }}",route=~"/api/.*",le="{{ $le }}"}[6h]))
+              /
+              sum(rate(http_request_duration_seconds_count{job="{{ .Release.Name }}",route=~"/api/.*"}[6h]))
+            )
+        - record: ratings_api:sli_errors:ratio_rate3d
+          expr: |
+            (sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*",status=~"5.."}[3d])) or vector(0))
+            /
+            sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*"}[3d]))
+        - record: ratings_api:sli_slow:ratio_rate3d
+          expr: |
+            1 - (
+              sum(rate(http_request_duration_seconds_bucket{job="{{ .Release.Name }}",route=~"/api/.*",le="{{ $le }}"}[3d]))
+              /
+              sum(rate(http_request_duration_seconds_count{job="{{ .Release.Name }}",route=~"/api/.*"}[3d]))
+            )
+        - record: ratings_api:requests:rate5m
+          expr: sum(rate(http_requests_total{job="{{ .Release.Name }}",route=~"/api/.*"}[5m]))
+        # Share of the error budget left, measured over the 3d window (Prometheus keeps 3d here, not 30d).
+        - record: ratings_api:error_budget_remaining:ratio
+          expr: 1 - (ratings_api:sli_errors:ratio_rate3d / (1 - {{ $avail }}))
+    - name: {{ .Release.Name }}-slo-alerts
+      rules:
+        - alert: RatingsApiErrorBudgetBurnFast
+          expr: |
+            ratings_api:sli_errors:ratio_rate1h > (14.4 * (1 - {{ $avail }}))
+            and
+            ratings_api:sli_errors:ratio_rate5m > (14.4 * (1 - {{ $avail }}))
+          for: 2m
+          labels:
+            severity: page
+            slo: availability
+          annotations:
+            summary: ratings-api is burning its availability error budget 14.4x too fast
+            description: "5xx ratio over 1h is {{`{{ $value | humanizePercentage }}`}} (SLO target {{ $avail }})."
+        - alert: RatingsApiErrorBudgetBurnSlow
+          expr: |
+            ratings_api:sli_errors:ratio_rate6h > (6 * (1 - {{ $avail }}))
+            and
+            ratings_api:sli_errors:ratio_rate30m > (6 * (1 - {{ $avail }}))
+          for: 15m
+          labels:
+            severity: ticket
+            slo: availability
+          annotations:
+            summary: ratings-api is burning its availability error budget 6x too fast
+            description: "5xx ratio over 6h is {{`{{ $value | humanizePercentage }}`}}."
+        - alert: RatingsApiLatencyBudgetBurnFast
+          expr: |
+            ratings_api:sli_slow:ratio_rate1h > (14.4 * (1 - {{ $lat }}))
+            and
+            ratings_api:sli_slow:ratio_rate5m > (14.4 * (1 - {{ $lat }}))
+          for: 2m
+          labels:
+            severity: page
+            slo: latency
+          annotations:
+            summary: ratings-api latency SLO burning 14.4x too fast
+            description: "Share of requests slower than {{ $le }}s over 1h is {{`{{ $value | humanizePercentage }}`}}."
+        - alert: RatingsApiNoTraffic
+          expr: absent(ratings_api:requests:rate5m) or ratings_api:requests:rate5m == 0
+          for: 10m
+          labels:
+            severity: ticket
+          annotations:
+            summary: ratings-api has no /api traffic, so its SLIs cannot be computed
+{{- end }}

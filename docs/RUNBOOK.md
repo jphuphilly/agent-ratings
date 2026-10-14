@@ -88,6 +88,39 @@ curl -sk --resolve ratings-dev.theblockchainarcade.io:443:$GW_IP https://ratings
 Only `/api` is routed to ratings-api, so `/metrics` on the public hostname lands on whoami. Prometheus output there means
 the route leaked.
 
+## Observability and SLOs
+`apps/monitoring.yaml` installs kube-prometheus-stack (Prometheus, Alertmanager, Grafana). The ratings-api
+chart adds a ServiceMonitor, SLO rules (`templates/prometheusrule.yaml`), a Grafana dashboard and a small
+load generator (~1 req/s) so the SLIs always have data.
+
+| SLO | Target | Error budget | Alerts |
+|---|---|---|---|
+| Availability: /api requests not 5xx | 99.5% | 0.5% | fast burn 14.4x (1h and 5m, for 2m), slow burn 6x (6h and 30m, for 15m) |
+| Latency: /api requests < 250ms | 99% | 1% | fast burn 14.4x (1h and 5m, for 2m) |
+
+Budget is measured over 3d, because Prometheus keeps 3d of data here (not 30d).
+
+Verify (after install-argocd; monitoring takes a few minutes to become Healthy):
+```bash
+kubectl -n argocd get applications                       # apps, monitoring, ratings-api: Synced/Healthy
+kubectl -n monitoring port-forward svc/kps-prometheus 9090 >/dev/null 2>&1 &
+curl -s 'localhost:9090/api/v1/targets?state=active' | python3 -c 'import sys,json; print([t["health"] for t in json.load(sys.stdin)["data"]["activeTargets"] if t["labels"].get("job")=="ratings-api"])'   # ['up', 'up']
+curl -s 'localhost:9090/api/v1/query' --data-urlencode 'query=ratings_api:requests:rate5m'                            # ~1 req/s
+curl -s 'localhost:9090/api/v1/query' --data-urlencode 'query=ratings_api:sli_errors:ratio_rate5m'                    # 0
+```
+Grafana: `kubectl -n monitoring port-forward svc/kps-grafana 3000:80`, open localhost:3000, dashboard
+"ratings-api SLOs". User `admin`, password: `kubectl -n monitoring get secret kps-grafana -o jsonpath='{.data.admin-password}' | base64 -d`.
+
+SLO drill (proves the fast-burn alert fires, through Git only):
+1. Set `faultRate: "0.2"` in `charts/ratings-api/values.yaml`, commit by path, push, then `T=$(date +%s)`.
+2. Poll until the alert fires:
+   ```bash
+   firing() { curl -s localhost:9090/api/v1/alerts | python3 -c 'import sys,json; sys.exit(0 if any(a["labels"]["alertname"]=="RatingsApiErrorBudgetBurnFast" and a["state"]=="firing" for a in json.load(sys.stdin)["data"]["alerts"]) else 1)'; }
+   until firing; do sleep 15; done; echo "firing after $(( $(date +%s)-T ))s"
+   ```
+   Detection time = push -> firing (includes ~3m Argo poll + 2m `for`).
+3. Revert the commit and push. Confirm the alert clears and 5m error ratio returns to 0.
+
 ## Gotchas
 - The workstation's DNS is proxied (ChromeOS resolver at 100.115.92.193) and caches NXDOMAIN.
   Never verify with local `dig` or by name: use `--resolve`. DNS checks run from inside the cluster.
