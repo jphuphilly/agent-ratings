@@ -9,7 +9,7 @@ metadata:
   name: whoami
   namespace: demo
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: whoami
