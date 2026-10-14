@@ -19,3 +19,7 @@ date,metric,seconds
 2026-10-13,platform_install,113
 2026-10-13,cert_secret,33
 2026-10-13,cert_served,74
+2026-10-14,platform_install,64
+2026-10-14,cert_secret,31
+2026-10-14,cert_served,62
+2026-10-14,dns_wait,11
