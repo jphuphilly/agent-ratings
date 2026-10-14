@@ -12,7 +12,7 @@ The application is intentionally simple. Roughly 90% of the effort goes into the
 | 1b | Gateway API (Envoy Gateway) + cert-manager, automated DNS + TLS | ✅ Done |
 | 1c | Sample app exposed over TLS | ✅ Done |
 | — | GitOps bootstrap: Argo CD owns `apps/` (self-heal, prune, revision-verified) | ✅ Done |
-| 2a | ratings-api: own Helm chart, CI to GHCR, tag-based releases via Argo | ⏳ In progress |
+| 2a | ratings-api: own Helm chart, CI to GHCR, tag-based releases via Argo (release + rollback verified) | ✅ Done |
 | 2+ | Argo owns `platform/`, secret scanning, observability + SLOs | Planned |
 
 Procedures, measured timings and findings: [docs/RUNBOOK.md](docs/RUNBOOK.md),

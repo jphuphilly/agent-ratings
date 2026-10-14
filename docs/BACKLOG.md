@@ -1,7 +1,7 @@
 # Backlog
 
-- [ ] ratings-api v0: FastAPI + own Helm chart + GHCR image via GitHub Actions, deployed by Argo
-  (app-of-apps). Written 2026-10-14; verify on next rebuild
+- [x] ratings-api v0: FastAPI + own Helm chart + GHCR image via GitHub Actions, deployed by Argo
+  (app-of-apps). Verified 2026-10-14: deployed 0.1.0, released 0.1.1 (107s), rolled back by revert (168s)
 - [x] GitOps bootstrap: Argo CD owns `apps/`. Verified 2026-10-14: Synced/Healthy, self-heal <=1s,
   push->sync 155-178s, revision matched HEAD
 - [ ] GitOps: Argo CD owns `platform/` too. Plan first: Argo would then manage cert-manager/Gateway that
@@ -13,3 +13,5 @@
 - [ ] Secret scanning in CI (gitleaks) -- repo is public
 - [ ] CI/CD + Renovate, security hardening, observability, write-up
 - [ ] Argo CD webhook from GitHub (needs argocd-server exposed with auth): sync in seconds, not ~3m poll
+- [ ] dns_wait: measure from when the A record is written, not from when the probe starts
+- [ ] Release automation: CI opens the values.yaml bump PR after pushing an image (removes the manual edit)
