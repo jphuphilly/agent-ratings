@@ -8,3 +8,4 @@
 - [ ] Benchmark script (n=3) against the final GitOps bootstrap path
 - [ ] Secret scanning in CI (gitleaks) -- repo is public
 - [ ] CI/CD + Renovate, security hardening, observability, write-up
+- Argo webhook from GitHub (requires exposing argocd-server with auth) -> sync in seconds instead of ~3m poll.

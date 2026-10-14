@@ -41,3 +41,9 @@ If anything fails after create-cluster, still run teardown.
   Never verify with local `dig` or by name: use `--resolve`. DNS checks run from inside the cluster.
 - `ISSUER` takes the full name (`letsencrypt-staging` / `letsencrypt-prod`). Let's Encrypt prod
   allows 5 certs/week, so staging is the default.
+
+## GitOps (Argo CD owns apps/)
+- Install: `RECORD=1 ./scripts/install-argocd.sh` after issue-cert -> expect `apps: Synced/Healthy`.
+- Change an app: edit under apps/, commit **by path**, push. Expect sync within ~3m (poll).
+- Self-heal check: `kubectl -n demo scale deploy whoami --replicas=5` -> reverts to 2 in ~1s.
+- Metrics (2026-10-14): argocd_install 54s (n=1) | self-heal <=1s | push->sync 155-178s (n=2, polling-bound)

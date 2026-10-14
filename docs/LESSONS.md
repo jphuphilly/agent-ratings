@@ -17,3 +17,10 @@
 - **Inspect bytes, don't guess encodings.** The LKE kubeconfig output was already-decoded YAML with a
   leading newline (`od -c`).
 - **Dangling DNS.** Teardown deletes the A record, so it never points at a recycled IP.
+- **GitOps: self-heal is instant, Git sync is polled.** Manual scale 2->5 was reverted in <=1s
+  (1-second resolution). Push-to-cluster took 178s and 155s: bounded by Argo's ~3m reconciliation
+  poll, not pipeline speed. Proof is `status.sync.revision == git rev-parse HEAD`, not replica count.
+- **Argo "Healthy" doesn't check HTTPRoute.** No built-in health check for it; `curl --resolve` -> 200
+  stays the real end-to-end test.
+- **`git commit -am` sweeps script-written files.** RECORD=1 appends to results/rebuild.csv, which
+  landed in an unrelated proof commit. Commit by path.
