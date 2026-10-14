@@ -58,6 +58,23 @@ Not in the CSVs (measured by hand on 2026-10-14):
 - UI (not exposed): `kubectl -n argocd port-forward svc/argocd-server 8080:443`, user `admin`, password in
   secret `argocd-initial-admin-secret`.
 
+## ratings-api release flow
+1. Change code under `services/ratings-api/`, commit by path, push. CI runs tests and builds the image,
+   but does not push it.
+2. Release: `git tag ratings-api-vX.Y.Z && git push origin ratings-api-vX.Y.Z`. CI pushes
+   `ghcr.io/jphuphilly/agent-ratings/ratings-api:X.Y.Z`.
+3. Deploy: set `image.tag: "X.Y.Z"` in `charts/ratings-api/values.yaml`, commit by path, push.
+   Argo rolls it out within ~3m.
+4. Rollback: revert that values.yaml commit. Git is the deploy log.
+
+Verify:
+```bash
+curl -sk --resolve ratings-dev.theblockchainarcade.io:443:$GW_IP https://ratings-dev.theblockchainarcade.io/api/version   # {"version":"X.Y.Z"}
+curl -sk --resolve ratings-dev.theblockchainarcade.io:443:$GW_IP https://ratings-dev.theblockchainarcade.io/metrics | grep -c '^# HELP'   # 0
+```
+Only `/api` is routed to ratings-api, so `/metrics` on the public hostname lands on whoami. Prometheus output there means
+the route leaked.
+
 ## Gotchas
 - The workstation's DNS is proxied (ChromeOS resolver at 100.115.92.193) and caches NXDOMAIN.
   Never verify with local `dig` or by name: use `--resolve`. DNS checks run from inside the cluster.
