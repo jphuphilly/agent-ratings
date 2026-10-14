@@ -11,7 +11,7 @@ RECORD=1 ./scripts/create-cluster.sh
 export KUBECONFIG=~/.kube/ratings-dev.yaml          # per shell
 RECORD=1 ./scripts/install-platform.sh              # also sets the DNS A record via GoDaddy API
 RECORD=1 ISSUER=letsencrypt-staging ./scripts/issue-cert.sh
-kubectl apply -f apps/demo/whoami.yaml && kubectl -n demo rollout status deploy/whoami --timeout=120s
+RECORD=1 ./scripts/install-argocd.sh               # Argo CD then deploys everything in apps/
 ```
 
 ## Verify (before teardown)
@@ -31,6 +31,7 @@ If anything fails after create-cluster, still run teardown.
 | cluster_apply | terraform apply |
 | cluster_ready | apply start -> all nodes Ready (the stable number to quote) |
 | platform_install | Envoy Gateway + cert-manager + issuers |
+| argocd_install | Argo CD install -> Application 'apps' Synced/Healthy |
 | dns_wait | in-cluster probe ready -> authoritative NS serves the Gateway IP |
 | cert_secret | Certificate applied -> Secret signed by the expected issuer |
 | cert_served | ... -> Envoy serves that cert on 443 |

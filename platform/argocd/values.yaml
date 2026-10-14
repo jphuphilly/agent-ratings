@@ -1,0 +1,5 @@
+# Minimal Argo CD: no SSO, no notifications. UI via port-forward only (not exposed).
+dex:
+  enabled: false
+notifications:
+  enabled: false
