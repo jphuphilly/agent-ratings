@@ -1,0 +1,25 @@
+# Secret scanning config. The repo is public, so on top of gitleaks' default secret rules we also
+# fail on any IPv4 address: workstation IPs, cluster IPs and API ACL entries must never be committed.
+title = "agent-ratings gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "ipv4-address"
+description = "IPv4 address in a public repo (use a reserved documentation address instead)"
+regex = '''\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b'''
+keywords = ["."]
+tags = ["ip", "public-repo"]
+
+  # Addresses that are safe to publish.
+  [[rules.allowlists]]
+  regexTarget = "match"
+  regexes = [
+    '''^0\.0\.0\.0$''',                    # bind-all / "any" (also the rejected 0.0.0.0/0 ACL)
+    '''^127\.0\.0\.1$''',                  # loopback
+    '''^192\.0\.2\.\d{1,3}$''',            # RFC 5737 TEST-NET-1 (documentation)
+    '''^198\.51\.100\.\d{1,3}$''',         # RFC 5737 TEST-NET-2 (documentation)
+    '''^203\.0\.113\.\d{1,3}$''',          # RFC 5737 TEST-NET-3 (documentation)
+    '''^100\.115\.92\.193$''',             # ChromeOS Crostini resolver: same on every Chromebook
+  ]

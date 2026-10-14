@@ -10,7 +10,8 @@
 - [ ] Envoy proxy: 2 replicas + PodDisruptionBudget (currently 1; externalTrafficPolicy Local)
 - [ ] Credential inventory: list every key/token, map it to its user, revoke unused
 - [ ] Benchmark script (n=3) against the final GitOps bootstrap path
-- [ ] Secret scanning in CI (gitleaks) -- repo is public
+- [x] Secret scanning in CI: gitleaks (full history, default rules + IPv4 rule) and an IP check on new
+  commit messages, on every push and PR
 - [ ] CI/CD + Renovate, security hardening, observability, write-up
 - [ ] Argo CD webhook from GitHub (needs argocd-server exposed with auth): sync in seconds, not ~3m poll
 - [ ] dns_wait: measure from when the A record is written, not from when the probe starts
