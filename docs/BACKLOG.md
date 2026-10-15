@@ -12,11 +12,15 @@
 - [ ] Benchmark script (n=3) against the final GitOps bootstrap path
 - [x] Secret scanning in CI: gitleaks (full history, default rules + IPv4 rule) and an IP check on new
   commit messages, on every push and PR
-- [ ] Observability: kube-prometheus-stack + ratings-api SLOs (availability + latency, burn-rate alerts),
-  Grafana dashboard, fault-injection drill. Written 2026-10-14; verify on next rebuild
+- [x] Observability: kube-prometheus-stack + ratings-api SLOs (availability + latency, burn-rate alerts),
+  Grafana dashboard, fault-injection drill. Verified 2026-10-14: fast burn fired ~686s after a 20% fault
+  push, cleared 349s after revert; slow burn fired after recovery as expected
 - [ ] Grafana admin password from a generated Secret (chart default is publicly known; UI is port-forward only)
 - [ ] Alertmanager receiver (alerts currently visible only in Prometheus/Alertmanager UIs)
 - [ ] CI/CD + Renovate, security hardening, write-up
 - [ ] Argo CD webhook from GitHub (needs argocd-server exposed with auth): sync in seconds, not ~3m poll
 - [ ] dns_wait: measure from when the A record is written, not from when the probe starts
 - [ ] Release automation: CI opens the values.yaml bump PR after pushing an image (removes the manual edit)
+- [ ] SLO alerts: `runbook_url` annotations explaining each alert, incl. that slow burn trails recovery
+- [ ] Latency SLO drill (inject delay, not just 5xx): only availability has been proven to fire
+- [ ] cert_secret jumped to 54s on one run (31-34s before): repeat to see if it's Let's Encrypt staging variance
