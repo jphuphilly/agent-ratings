@@ -26,7 +26,7 @@ route:
     sectionName: https
 
 # Fraction (0.0-1.0) of /api requests answered with 503. SLO drill only; keep 0 otherwise.
-faultRate: "0.2"
+faultRate: "0"
 
 # Prometheus scraping + SLO rules + Grafana dashboard. Needs the monitoring stack (apps/monitoring.yaml).
 monitoring:
