@@ -41,3 +41,17 @@
   before debugging the network.
 - **"No manual steps" has to include teardown.** pre-destroy.sh stops for a y/N confirmation. Kept as the
   interactive default (it deletes things); `ASSUME_YES=1` now skips it for unattended runs.
+- **Two windows, two jobs.** After the SLO drill was reverted, the 1h burn rate still read 14.7 (above 14.4),
+  yet the fast alert cleared because the 5m window had dropped to 0. The long window prevents false alarms from
+  short spikes; the short window stops a fixed incident from paging.
+- **The long window sets detection time.** At 20% errors the fast alert fired ~11.5 min after the push:
+  ~3 min Argo poll, then the 1h ratio needed ~7 min of faults to outweigh 12 min of clean traffic, plus the
+  2m `for`. With a full clean hour behind it, 20% errors would take ~24 min; 100% errors ~4 min.
+- **Slow-burn alerts trail recovery.** The 6x alert went pending first (lower threshold) but needs 15m, so it
+  fired ~1.5 min after the service was healthy. It resolves as its 30m window drains. Expected, not a bug.
+- **A restart resets the short window.** The 5m error ratio hit ~0.21 within ~4 min, not a slow ramp: the
+  rollout replaced the pods, and the new pods' counters only ever saw faulted traffic.
+- **Time incidents from server timestamps.** Screenshot clocks suggested the alert took 6 min; GitHub's push
+  time and Prometheus `activeAt` showed ~11.5 min. Use the systems' own timestamps, not when someone looked.
+- **A budget needs history.** "0.0% error budget remaining" after 13 minutes of 20% errors is true only
+  because a fresh Prometheus had ~35 minutes of data. Report a budget with the window it was computed over.

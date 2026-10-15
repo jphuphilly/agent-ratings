@@ -273,6 +273,7 @@ data:
           "id": 5,
           "type": "timeseries",
           "title": "5xx ratio by window (alert lines: 14.4x and 6x budget)",
+      "description": "On a fresh cluster with under 1h of data, the 1h and 6h lines contain the same samples and overlap exactly.",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"

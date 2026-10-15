@@ -33,16 +33,16 @@ run: `ASSUME_YES=1 RECORD=1 ./scripts/teardown.sh`.
 | Metric | Measures | Observed (as of 2026-10-14) |
 |---|---|---|
 | cluster_apply | terraform apply | 102-188s, noisy |
-| cluster_ready | apply start -> all nodes Ready (the stable number to quote) | **179-208s (n=6)** |
+| cluster_ready | apply start -> all nodes Ready (the stable number to quote) | **179-208s (n=7)** |
 | platform_install | Envoy Gateway + cert-manager + issuers | 55-113s (range only, noisy) |
-| argocd_install | Argo CD install -> Application 'apps' Synced/Healthy | 54-57s (n=2) |
+| argocd_install | Argo CD install -> Application 'apps' Synced/Healthy | 54-57s (n=3) |
 | dns_wait | in-cluster probe ready -> authoritative NS serves the Gateway IP | 10-11s (n=2 honest runs) |
-| cert_secret | Certificate applied -> Secret signed by the expected issuer | 31-34s (n=5) |
-| cert_served | ... -> Envoy serves that cert on 443 | 62-78s (n=4 bounded runs) |
-| teardown | destroy cluster + delete DNS record | ~40s (42s latest) |
+| cert_secret | Certificate applied -> Secret signed by the expected issuer | 31-54s (n=6; 54s on 2026-10-14 run 3, cause not investigated) |
+| cert_served | ... -> Envoy serves that cert on 443 | 62-85s (n=5 bounded runs) |
+| teardown | destroy cluster + delete DNS record | 40-42s |
 
-Excluded as measurement artifacts: cert_served 300 (unbounded probe loop), dns_wait 1
-(workstation resolver, not the authoritative server) and dns_wait 0 (record already published before
+Excluded as measurement artifacts: cert_served 300 (unbounded probe loop), the first dns_wait 1
+(workstation resolver, not the authoritative server), and dns_wait 0 and the later dns_wait 1 (record already published before
 the probe started, because install-platform was re-run). See LESSONS.md.
 
 Not in the CSVs (measured by hand on 2026-10-14):
@@ -98,7 +98,8 @@ load generator (~1 req/s) so the SLIs always have data.
 | Availability: /api requests not 5xx | 99.5% | 0.5% | fast burn 14.4x (1h and 5m, for 2m), slow burn 6x (6h and 30m, for 15m) |
 | Latency: /api requests < 250ms | 99% | 1% | fast burn 14.4x (1h and 5m, for 2m) |
 
-Budget is measured over 3d, because Prometheus keeps 3d of data here (not 30d).
+Budget is measured over 3d, because Prometheus keeps 3d of data here (not 30d). On a fresh cluster the
+window holds only what Prometheus has scraped so far, so a short drill can use the whole budget.
 
 Verify (after install-argocd; monitoring takes a few minutes to become Healthy):
 ```bash
@@ -121,6 +122,24 @@ SLO drill (proves the fast-burn alert fires, through Git only):
    Detection time = push -> firing (includes ~3m Argo poll + 2m `for`).
 3. Revert the commit and push. Confirm the alert clears and 5m error ratio returns to 0.
 
+Drill results, 2026-10-14 (faultRate 0.2, about 12 minutes of clean traffic before the push):
+
+| Event | Time | Source |
+|---|---|---|
+| Fault commit pushed (`957020a`) | 21:51:11 | GitHub push timestamp |
+| 5m error ratio at ~0.21 | by ~21:55 | Prometheus / Grafana |
+| Slow burn (6x) pending | 21:56:37 | Prometheus `activeAt` |
+| Fast burn (14.4x) pending | 22:00:37 | Prometheus `activeAt` |
+| **Fast burn firing** | ~22:02:37, **~686s after push** (polling loop: 695s) | `activeAt` + 2m `for` |
+| Revert pushed (`fd02ce6`) | 22:04:17 | git |
+| **Fast burn cleared** | ~22:10:06, **349s after revert** | polling loop |
+| Slow burn firing | ~22:11:37, after the service had recovered | `activeAt` + 15m `for` |
+
+Expected behaviour seen in the drill: the 1h burn rate stayed at 14.7 after recovery, but the fast alert
+cleared because the 5m window had dropped to 0. The slow alert fired late and resolves as its 30m window
+drains. See LESSONS.md.
+![SLO drill in Grafana](img/slo-drill-2026-10-14.png)
+
 ## Gotchas
 - The workstation's DNS is proxied (ChromeOS resolver at 100.115.92.193) and caches NXDOMAIN.
   Never verify with local `dig` or by name: use `--resolve`. DNS checks run from inside the cluster.
@@ -131,5 +150,12 @@ SLO drill (proves the fast-burn alert fires, through Git only):
   If it repeats: `sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1` (resets on container restart).
 - CI fails on any IPv4 address in files or in new commit messages (`.gitleaks.toml`). If you need an
   example address in docs, use a reserved documentation range (192.0.2.x, 198.51.100.x, 203.0.113.x).
+- Every new terminal tab needs `source ~/.config/agent-ratings/env` and
+  `export KUBECONFIG=~/.kube/ratings-dev.yaml`. Without it, kubectl falls back to `localhost:8080`.
+  Port-forwards (`localhost:9090`) work from any tab.
+- Ctrl-Z suspends a command; it does not stop it. Use Ctrl-C to cancel. Before teardown, `jobs` in each tab
+  should print nothing (kill leftover port-forwards with `kill %1 %2 %3`).
+- Read Prometheus API output by parsing the JSON (`python3 -c 'import json...'`), not with `grep -A1`:
+  the value sits on a different line from the timestamp.
 - Scripts append to tracked `results/*.csv` when RECORD=1. Commit by path, never `git commit -am`,
   or those rows end up in unrelated commits.

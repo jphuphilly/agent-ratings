@@ -14,8 +14,16 @@ The application is intentionally simple. Roughly 90% of the effort goes into the
 | — | GitOps bootstrap: Argo CD owns `apps/` (self-heal, prune, revision-verified) | ✅ Done |
 | 2a | ratings-api: own Helm chart, CI to GHCR, tag-based releases via Argo (release + rollback verified) | ✅ Done |
 | 2b | Secret scanning: gitleaks + IP rule on every push/PR, full history | ✅ Done |
-| 2c | Observability: Prometheus, Grafana, ratings-api SLOs with burn-rate alerts | ⏳ In progress |
+| 2c | Observability: Prometheus, Grafana, ratings-api SLOs with burn-rate alerts (fault drill verified) | ✅ Done |
 | 3+ | Argo owns `platform/`, Renovate, write-up | Planned |
+
+### SLO drill (2026-10-14)
+
+20% of ratings-api requests were made to fail by a one-line Git commit. The fast-burn alert (14.4x) fired
+about 11.5 minutes after the push. Reverting the commit cleared it 6 minutes later. Timings come from
+GitHub's push timestamp and Prometheus `activeAt`; details are in the [runbook](docs/RUNBOOK.md#observability-and-slos).
+
+![ratings-api SLO dashboard during the drill](docs/img/slo-drill-2026-10-14.png)
 
 Procedures, measured timings and findings: [docs/RUNBOOK.md](docs/RUNBOOK.md),
 [docs/LESSONS.md](docs/LESSONS.md), [docs/BACKLOG.md](docs/BACKLOG.md).
