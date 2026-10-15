@@ -23,5 +23,7 @@
 - [ ] Release automation: CI opens the values.yaml bump PR after pushing an image (removes the manual edit)
 - [ ] SLO alerts: `runbook_url` annotations explaining each alert, incl. that slow burn trails recovery.
   Written (docs/ALERTS.md, chart 0.2.1); tick after the annotations are seen in Prometheus on a live cluster
+- [ ] Arena v0 (`arena/`): scenario 01 bad image, auto-grader, restricted agent login. Run human baseline
+  (jake), then one AI agent. v1: agent in a container holding only the agent kubeconfig; more scenarios; cost tracking
 - [ ] Latency SLO drill (inject delay, not just 5xx): only availability has been proven to fire
 - [ ] cert_secret jumped to 54s on one run (31-34s before): repeat to see if it's Let's Encrypt staging variance
