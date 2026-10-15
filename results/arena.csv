@@ -1,0 +1,3 @@
+date,scenario,contestant,result,seconds
+2026-10-15,01-bad-image,jake-assisted,timeout,1626
+2026-10-15,01-bad-image,jake-repeat,pass,289
