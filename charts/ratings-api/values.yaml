@@ -35,6 +35,8 @@ monitoring:
     availabilityTarget: 0.995   # 99.5% of /api requests are not 5xx (30d). Error budget 0.5%.
     latencyTarget: 0.99         # 99% of /api requests complete in < 250ms (30d).
     latencyThresholdBucket: "0.25"   # must be an existing histogram bucket (prometheus_client default buckets)
+  # Each SLO alert links to its section here (runbook_url annotation). Anchor = alert name, lowercased.
+  runbookBaseUrl: https://github.com/jphuphilly/agent-ratings/blob/main/docs/ALERTS.md
 
 # Steady synthetic traffic so the SLIs have data to compute on. Dev only.
 loadgen:

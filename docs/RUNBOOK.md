@@ -98,6 +98,8 @@ load generator (~1 req/s) so the SLIs always have data.
 | Availability: /api requests not 5xx | 99.5% | 0.5% | fast burn 14.4x (1h and 5m, for 2m), slow burn 6x (6h and 30m, for 15m) |
 | Latency: /api requests < 250ms | 99% | 1% | fast burn 14.4x (1h and 5m, for 2m) |
 
+What to do when each alert fires: [ALERTS.md](ALERTS.md) (linked from every alert's `runbook_url`).
+
 Budget is measured over 3d, because Prometheus keeps 3d of data here (not 30d). On a fresh cluster the
 window holds only what Prometheus has scraped so far, so a short drill can use the whole budget.
 
