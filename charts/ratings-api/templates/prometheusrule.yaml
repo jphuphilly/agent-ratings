@@ -2,6 +2,7 @@
 {{- $avail := .Values.monitoring.slo.availabilityTarget }}
 {{- $lat := .Values.monitoring.slo.latencyTarget }}
 {{- $le := .Values.monitoring.slo.latencyThresholdBucket }}
+{{- $rb := .Values.monitoring.runbookBaseUrl }}
 # SLOs for ratings-api, as multi-window multi-burn-rate alerts (Google SRE Workbook, ch. 5).
 #   Availability: {{ $avail }} of /api requests are not 5xx.        Error budget = 1 - target.
 #   Latency:      {{ $lat }} of /api requests complete in < {{ $le }}s.
@@ -95,6 +96,7 @@ spec:
             slo: availability
           annotations:
             summary: ratings-api is burning its availability error budget 14.4x too fast
+            runbook_url: "{{ $rb }}#ratingsapierrorbudgetburnfast"
             description: "5xx ratio over 1h is {{`{{ $value | humanizePercentage }}`}} (SLO target {{ $avail }})."
         - alert: RatingsApiErrorBudgetBurnSlow
           expr: |
@@ -107,6 +109,7 @@ spec:
             slo: availability
           annotations:
             summary: ratings-api is burning its availability error budget 6x too fast
+            runbook_url: "{{ $rb }}#ratingsapierrorbudgetburnslow"
             description: "5xx ratio over 6h is {{`{{ $value | humanizePercentage }}`}}."
         - alert: RatingsApiLatencyBudgetBurnFast
           expr: |
@@ -119,6 +122,7 @@ spec:
             slo: latency
           annotations:
             summary: ratings-api latency SLO burning 14.4x too fast
+            runbook_url: "{{ $rb }}#ratingsapilatencybudgetburnfast"
             description: "Share of requests slower than {{ $le }}s over 1h is {{`{{ $value | humanizePercentage }}`}}."
         - alert: RatingsApiNoTraffic
           expr: absent(ratings_api:requests:rate5m) or ratings_api:requests:rate5m == 0
@@ -127,4 +131,5 @@ spec:
             severity: ticket
           annotations:
             summary: ratings-api has no /api traffic, so its SLIs cannot be computed
+            runbook_url: "{{ $rb }}#ratingsapinotraffic"
 {{- end }}

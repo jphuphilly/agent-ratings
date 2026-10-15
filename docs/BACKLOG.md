@@ -21,6 +21,7 @@
 - [ ] Argo CD webhook from GitHub (needs argocd-server exposed with auth): sync in seconds, not ~3m poll
 - [ ] dns_wait: measure from when the A record is written, not from when the probe starts
 - [ ] Release automation: CI opens the values.yaml bump PR after pushing an image (removes the manual edit)
-- [ ] SLO alerts: `runbook_url` annotations explaining each alert, incl. that slow burn trails recovery
+- [ ] SLO alerts: `runbook_url` annotations explaining each alert, incl. that slow burn trails recovery.
+  Written (docs/ALERTS.md, chart 0.2.1); tick after the annotations are seen in Prometheus on a live cluster
 - [ ] Latency SLO drill (inject delay, not just 5xx): only availability has been proven to fire
 - [ ] cert_secret jumped to 54s on one run (31-34s before): repeat to see if it's Let's Encrypt staging variance
