@@ -1,0 +1,70 @@
+# The patient: a known-good copy of ratings-api that each scenario breaks.
+# Lives in its own namespace "arena", outside apps/, so Argo CD never touches it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: arena
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: arena
+spec:
+  replicas: 2
+  # Recreate (not RollingUpdate) so a bad change takes the site fully down instead of
+  # leaving the old pods serving. Each scenario needs a real outage to grade.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: ghcr.io/jphuphilly/agent-ratings/ratings-api:0.2.0
+          env:
+            - name: FAULT_RATE
+              value: "0"
+          ports:
+            - name: http
+              containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: arena
+spec:
+  selector:
+    app: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

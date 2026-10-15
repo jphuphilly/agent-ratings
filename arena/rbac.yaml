@@ -1,0 +1,43 @@
+# The contestant's login. Can look at and fix things in namespace "arena" only.
+# Cannot read Secrets, create new objects, or see any other namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent
+  namespace: arena
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agent
+  namespace: arena
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log, events, services, endpoints, configmaps]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [delete]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets]
+    verbs: [get, list, watch, patch, update]
+  - apiGroups: [apps]
+    resources: [deployments/scale]
+    verbs: [get, patch, update]
+  - apiGroups: [events.k8s.io]
+    resources: [events]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agent
+  namespace: arena
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: arena
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: agent
